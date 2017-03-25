@@ -33,7 +33,7 @@ public class PerspectiveSender {
 
   }
 
-  private void recieveFile(InputStream inputStream) throws IOException {
+  private void receiveFile(InputStream inputStream) throws IOException {
     byte[] buffer = new byte[1024];
 
     // Retrieve the file name of the file
@@ -46,7 +46,7 @@ public class PerspectiveSender {
     BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(
         new File(projectPath.toAbsolutePath().toString(), fileName)));
     int bytesRead = inputStream.read(fileNameBuffer, fileNameSize, fileNameBuffer.length);
-    bos.write(fileNameBuffer, 0, bytesRead);
+    bos.write(buffer, 0, bytesRead);
     bos.close();
   }
 
@@ -70,21 +70,27 @@ public class PerspectiveSender {
     outputStream.flush();
   }
 
-  public static void main(String[] args) throws IOException {
-    if (args[0].equals("r")) {
-      PerspectiveSender perspectiveSender = new PerspectiveSender("10.122.70.134", 8765, 8766,
-          Paths.get("C:/Users/hhajd/Documents/TARGET"));
-      perspectiveSender.open();
+  public static void main(String[] args){
 
-      Socket sock = perspectiveSender.inputSocket.accept();
-      perspectiveSender.recieveFile(sock.getInputStream());
-      sock.close();
+    try {
 
-    } else {
-      PerspectiveSender perspectiveSender = new PerspectiveSender("10.122.1.61", 8766, 8765,
-          Paths.get("Users/ryanmitchell/Desktop/projects/codesync"));
-      perspectiveSender.open();
-      perspectiveSender.sendFile(new File("Hello.txt"), perspectiveSender.outputSocket.getOutputStream());
+      if (args[0].equals("r")) {
+        PerspectiveSender perspectiveSender = new PerspectiveSender("10.122.70.134", 8765, 8766,
+            Paths.get("C:/Users/hhajd/Documents/TARGET"));
+        perspectiveSender.open();
+
+        Socket sock = perspectiveSender.inputSocket.accept();
+        perspectiveSender.receiveFile(sock.getInputStream());
+        sock.close();
+
+      } else {
+        PerspectiveSender perspectiveSender = new PerspectiveSender("10.122.1.61", 8766, 8765,
+            Paths.get("Users/ryanmitchell/Desktop/projects/codesync"));
+        perspectiveSender.open();
+        perspectiveSender.sendFile(new File("Hello.txt"), perspectiveSender.outputSocket.getOutputStream());
+      }
+    } catch (IOException e) {
+      System.out.println(e.toString());
     }
   }
 }
