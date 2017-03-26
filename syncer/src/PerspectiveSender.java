@@ -50,10 +50,10 @@ public class PerspectiveSender {
     //inSocket.close();
 
     inputSocket = new ServerSocket(9999);
+    Socket inSocket = inputSocket.accept();
     while (true) {
-      Socket inSocket = inputSocket.accept();
       DataInputStream dis = new DataInputStream(inSocket.getInputStream());
-      DataOutputStream dos = new DataOutputStream(outputSocket.getOutputStream());
+      DataOutputStream dos = rdos;
       int size = dis.readInt();
 
       byte[] buffer = new byte[size];
@@ -79,12 +79,13 @@ public class PerspectiveSender {
         dos.write(relativePath.getBytes());
 
         int contentsSize = dis.readInt();
+        dos.writeInt(contentsSize);
+        System.out.println(contentsSize);
         byte[] contentsBuffers = new byte[contentsSize];
         dis.read(contentsBuffers);
 
         dos.write(contentsBuffers);
         dos.flush();
-
 
       } else if (request.startsWith("UPDATE_SELF:")) {
         System.out.println("Updates found");
@@ -117,8 +118,10 @@ public class PerspectiveSender {
     inputSocket = new ServerSocket(receivingPort);
     //outputSocket = new Socket(ip, targetPort);
 
+    Socket inSocket = inputSocket.accept();
     while (true) {
-      Socket inSocket = inputSocket.accept();
+      System.out.print("LLLL");
+      System.out.print("OOOO");
       DataInputStream dis = new DataInputStream(inSocket.getInputStream());
       DataOutputStream dos = new DataOutputStream(inSocket.getOutputStream());
       System.out.print("MMMM");
@@ -144,7 +147,7 @@ public class PerspectiveSender {
           dos.writeByte(0);
         }
       } else if (request.startsWith("UPDATE_OTHERS:")) {
-        dos.writeInt(size);
+        dos.writeInt("UPDATE_SELF:".getBytes().length);
         dos.write("UPDATE_SELF:".getBytes());
 
         // Retrieve the file name of the file
@@ -158,10 +161,13 @@ public class PerspectiveSender {
         dos.write(relativePath.getBytes());
 
         int contentsSize = dis.readInt();
+        dos.writeInt(contentsSize);
         byte[] contentsBuffers = new byte[contentsSize];
         dis.read(contentsBuffers, 0, contentsSize);
 
         dos.write(contentsBuffers);
+        dos.flush();
+
       } else if (request.startsWith("UPDATE_SELF:")) {
         System.out.println("Updates found");
 
