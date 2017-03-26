@@ -16,18 +16,28 @@ class MonitorChanges(sublime_plugin.EventListener):
         # connection to hostname on the port.
         try:
             filename = view.file_name()
-            call="UPDATE_OTHER"
-            msg = str(len(call))+ call + str(len(filename))+filename+str(view.size()) + view.substr(sublime.Region(0, view.size()-1))
+            call = "UPDATE_OTHERS:"
+            msg = intToBytes(len(call))
+            msg += bytes(call, 'utf_8') 
+            msg += intToBytes(len(filename))
+            msg += bytes(filename, 'utf_8')
+            msg += intToBytes(len(view.substr(sublime.Region(0, view.size()))))
+            msg += bytes(view.substr(sublime.Region(0, view.size())), 'utf_8')
+            print(str(msg))
             try: 
                 s.connect((host, port))
-                s.send(msg.encode('utf_8'))
+                s.send(msg)
                 s.close()
             except ConnectionRefusedError:
-                pass
-        except TypeError:
-            pass
+                print("Connection Refused")
+        except NullPointerException:
+            print("Type Error")
 
 
         #print(view.substr(sublime.Region(0, view.size()-1)
 
         
+def intToBytes(num):
+    arr = bytes([num])
+    pad = 4 - len(arr)
+    return bytes(pad) + arr 
