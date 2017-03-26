@@ -99,7 +99,7 @@ public class PerspectiveSender {
 
             }
             if (socket != ssss) {
-              ssss.close();
+              socket.close();
               return;
             }
             dos.flush();
@@ -150,7 +150,7 @@ public class PerspectiveSender {
 
   }
 
-  static Semaphore mutex = new Semaphore(2);
+  static Semaphore mutex = new Semaphore(1);
 
   static DataOutputStream dos;
   static Socket s;
