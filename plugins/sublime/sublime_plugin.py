@@ -23,14 +23,14 @@ class MonitorChanges(sublime_plugin.EventListener):
             msg += bytes(filename, 'utf_8')
             msg += intToBytes(len(view.substr(sublime.Region(0, view.size()))))
             msg += bytes(view.substr(sublime.Region(0, view.size())), 'utf_8')
-            print(str(msg))
+            #print(str(msg))
             try: 
                 s.connect((host, port))
                 s.send(msg)
                 s.close()
             except ConnectionRefusedError:
                 print("Connection Refused")
-        except NullPointerException:
+        except TypeError:
             print("Type Error")
 
 
