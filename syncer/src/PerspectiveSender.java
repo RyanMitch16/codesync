@@ -26,31 +26,26 @@ public class PerspectiveSender {
   /** */
   public void openReceiver(String username) throws IOException {
     System.out.println("Requesting connection");
-    inputSocket = new ServerSocket(receivingPort);
     outputSocket = new Socket(ip, targetPort);
 
-    byte[] request = ("ACCESS:" + username).getBytes();
-    outputSocket.getOutputStream().write(request.length);
-    outputSocket.getOutputStream().write(request);
+    byte[] requestbytes = ("ACCESS:" + username).getBytes();
+    outputSocket.getOutputStream().write(requestbytes.length);
+    outputSocket.getOutputStream().write(requestbytes);
 
-    Socket inSocket = inputSocket.accept();
-    if (inSocket.getInputStream().read() == 1) {
+    //Socket inSocket = outputSocket.getInputStream();
+    InputStream is = outputSocket.getInputStream();
+    if (is.read() == 1) {
       System.out.println("Connection accepted");
-      while (inSocket.getInputStream().read() == 1) {
-        receiveFile(inSocket.getInputStream());
+      while (is.read() == 1) {
+        receiveFile(is);
       }
       System.out.println("Files transferred");
     } else {
       System.out.println("Connection refused");
     }
-    inSocket.close();
-  }
+    //inSocket.close();
 
-  /** */
-  public void openHost() throws IOException {
-    inputSocket = new ServerSocket(receivingPort);
-    outputSocket = new Socket(ip, targetPort);
-
+    inputSocket = new ServerSocket(9999);
     while (true) {
       Socket inSocket = inputSocket.accept();
       InputStream inputStream = inSocket.getInputStream();
@@ -59,20 +54,7 @@ public class PerspectiveSender {
       inputStream.read(buffer, 0, size);
       String request = new String(buffer);
 
-      if (request.startsWith("ACCESS:")) {
-        System.out.println("Would you like to allow access to "
-            + request.substring(request.indexOf(":") + 1) +"? (y/n)");
-        Scanner scanner = new Scanner(System.in);
-        if (scanner.next().toLowerCase().equals("y")) {
-          System.out.println("Access granted");
-          outputSocket.getOutputStream().write(1);
-          sendAllFiles(new File(projectPath.toString()), outputSocket.getOutputStream());
-          outputSocket.getOutputStream().write(0);
-        } else {
-          System.out.println("Access denied");
-          outputSocket.getOutputStream().write(0);
-        }
-      } else if (request.startsWith("UPDATE_OTHERS:")) {
+      if (request.startsWith("UPDATE_OTHERS:")) {
         outputSocket.getOutputStream().write(size);
         outputSocket.getOutputStream().write("UPDATE_SELF:".getBytes());
 
@@ -109,6 +91,77 @@ public class PerspectiveSender {
         fooStream.write(contentsBuffers);
         fooStream.close();
       }
+      inSocket.close();
+
+    }
+  }
+
+  /** */
+  public void openHost() throws IOException {
+
+    inputSocket = new ServerSocket(receivingPort);
+    //outputSocket = new Socket(ip, targetPort);
+
+    while (true) {
+      Socket inSocket = inputSocket.accept();
+      InputStream inputStream = inSocket.getInputStream();
+      int size = inputStream.read();
+      byte[] buffer = new byte[size];
+      inputStream.read(buffer, 0, size);
+      String request = new String(buffer);
+
+      if (request.startsWith("ACCESS:")) {
+        System.out.println("Would you like to allow access to "
+            + request.substring(request.indexOf(":") + 1) +"? (y/n)");
+        Scanner scanner = new Scanner(System.in);
+        if (scanner.next().toLowerCase().equals("y")) {
+          System.out.println("Access granted");
+          inSocket.getOutputStream().write(1);
+          sendAllFiles(new File(projectPath.toString()), inSocket.getOutputStream());
+          inSocket.getOutputStream().write(0);
+          System.out.println("Done");
+        } else {
+          System.out.println("Access denied");
+          inSocket.getOutputStream().write(0);
+        }
+      } else if (request.startsWith("UPDATE_OTHERS:")) {
+        inSocket.getOutputStream().write(size);
+        inSocket.getOutputStream().write("UPDATE_SELF:".getBytes());
+
+        // Retrieve the file name of the file
+        int fileNameSize = inputStream.read();
+        byte[] fileNameBuffer = new byte[fileNameSize];
+        inputStream.read(fileNameBuffer, 0, fileNameSize);
+        String fileName = new String(fileNameBuffer);
+        String relativePath = fileName.substring(projectPath.toAbsolutePath().toString().length() + 1);
+
+        inSocket.getOutputStream().write(relativePath.getBytes().length);
+        inSocket.getOutputStream().write(relativePath.getBytes());
+
+        int contentsSize = inputStream.read();
+        byte[] contentsBuffers = new byte[contentsSize];
+        inputStream.read(contentsBuffers, 0, contentsSize);
+
+        inSocket.getOutputStream().write(contentsBuffers);
+      } else if (request.startsWith("UPDATE_SELF:")) {
+        System.out.println("Updates found");
+
+        // Retrieve the file name of the file
+        int fileNameSize = inputStream.read();
+        byte[] fileNameBuffer = new byte[fileNameSize];
+        inputStream.read(fileNameBuffer, 0, fileNameSize);
+        String fileName = new String(fileNameBuffer);
+
+        File file = new File(projectPath.toAbsolutePath().toString(), fileName);
+        int contentsSize = inputStream.read();
+        byte[] contentsBuffers = new byte[contentsSize];
+        inputStream.read(contentsBuffers, 0, contentsSize);
+
+        FileOutputStream fooStream = new FileOutputStream(file, false);
+        fooStream.write(contentsBuffers);
+        fooStream.close();
+      }
+      inSocket.close();
     }
   }
 
@@ -163,6 +216,7 @@ public class PerspectiveSender {
         //sendAllFiles(file, outputStream);
       } else {
         outputStream.write(1);
+        System.out.println("Sent 1");
         sendFile(file, outputStream);
       }
     }
@@ -173,12 +227,12 @@ public class PerspectiveSender {
     try {
 
       if (args[0].equals("r")) {
-        PerspectiveSender perspectiveSender = new PerspectiveSender("10.122.1.61", 8766, 9999,
-            Paths.get("C:/Users/hhajd/Documents/TARGET"));
+        PerspectiveSender perspectiveSender = new PerspectiveSender("10.122.1.61", 8765, 8766,
+            Paths.get("C:"));
         perspectiveSender.openReceiver("Ryan");
 
       } else {
-        PerspectiveSender perspectiveSender = new PerspectiveSender("10.122.212.221", 9999, 8766,
+        PerspectiveSender perspectiveSender = new PerspectiveSender("10.122.212.221", 8766, 8765,
             Paths.get("/Users/ryanmitchell/Desktop/projects/codesync/syncer/"));
         perspectiveSender.openHost();
       }
