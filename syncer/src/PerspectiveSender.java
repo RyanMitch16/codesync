@@ -30,8 +30,8 @@ public class PerspectiveSender {
     outputSocket = new Socket(ip, targetPort);
 
     byte[] request = ("ACCESS:" + username).getBytes();
-    outputSocket.getOutputStream().write(request);
     outputSocket.getOutputStream().write(request.length);
+    outputSocket.getOutputStream().write(request);
 
     Socket inSocket = inputSocket.accept();
     if (inSocket.getInputStream().read() == 1) {
@@ -58,17 +58,56 @@ public class PerspectiveSender {
       byte[] buffer = new byte[size];
       inputStream.read(buffer, 0, size);
       String request = new String(buffer);
+
       if (request.startsWith("ACCESS:")) {
         System.out.println("Would you like to allow access to "
             + request.substring(request.indexOf(":") + 1) +"? (y/n)");
         Scanner scanner = new Scanner(System.in);
         if (scanner.next().toLowerCase().equals("y")) {
+          System.out.println("Access granted");
           outputSocket.getOutputStream().write(1);
           sendAllFiles(new File(projectPath.toString()), outputSocket.getOutputStream());
           outputSocket.getOutputStream().write(0);
         } else {
+          System.out.println("Access denied");
           outputSocket.getOutputStream().write(0);
         }
+      } else if (request.startsWith("UPDATE_OTHERS:")) {
+        outputSocket.getOutputStream().write(size);
+        outputSocket.getOutputStream().write("UPDATE_SELF:".getBytes());
+
+        // Retrieve the file name of the file
+        int fileNameSize = inputStream.read();
+        byte[] fileNameBuffer = new byte[fileNameSize];
+        inputStream.read(fileNameBuffer, 0, fileNameSize);
+        String fileName = new String(fileNameBuffer);
+        String relativePath = fileName.substring(projectPath.toAbsolutePath().toString().length() + 1);
+
+        outputSocket.getOutputStream().write(relativePath.getBytes().length);
+        outputSocket.getOutputStream().write(relativePath.getBytes());
+
+        int contentsSize = inputStream.read();
+        byte[] contentsBuffers = new byte[contentsSize];
+        inputStream.read(contentsBuffers, 0, contentsSize);
+
+        outputSocket.getOutputStream().write(contentsBuffers);
+      } else if (request.startsWith("UPDATE_SELF:")) {
+        System.out.println("Updates found");
+
+        // Retrieve the file name of the file
+        int fileNameSize = inputStream.read();
+        byte[] fileNameBuffer = new byte[fileNameSize];
+        inputStream.read(fileNameBuffer, 0, fileNameSize);
+        String fileName = new String(fileNameBuffer);
+
+        File file = new File(projectPath.toAbsolutePath().toString(), fileName);
+        int contentsSize = inputStream.read();
+        byte[] contentsBuffers = new byte[contentsSize];
+        inputStream.read(contentsBuffers, 0, contentsSize);
+
+        FileOutputStream fooStream = new FileOutputStream(file, false);
+        fooStream.write(contentsBuffers);
+        fooStream.close();
       }
     }
   }
@@ -93,7 +132,7 @@ public class PerspectiveSender {
         new File(projectPath.toAbsolutePath().toString(), fileName)));
     int bytesTotal = inputStream.read();
     byte[] buffer = new byte[bytesTotal];
-    inputStream.read(fileNameBuffer, 0, bytesTotal);
+    inputStream.read(buffer, 0, bytesTotal);
     bos.write(buffer, 0, bytesTotal);
     bos.close();
   }
@@ -121,7 +160,7 @@ public class PerspectiveSender {
   private void sendAllFiles(File path, OutputStream outputStream) throws IOException {
     for (File file : path.listFiles()) {
       if (file.isDirectory()) {
-        sendAllFiles(path, outputStream);
+        //sendAllFiles(file, outputStream);
       } else {
         outputStream.write(1);
         sendFile(file, outputStream);
@@ -133,7 +172,7 @@ public class PerspectiveSender {
 
     try {
 
-      if (args[0].equals("bjhbjhbhj")) {
+      if (args[0].equals("r")) {
         PerspectiveSender perspectiveSender = new PerspectiveSender("10.122.1.61", 8765, 8766,
             Paths.get("C:/Users/hhajd/Documents/TARGET"));
         perspectiveSender.openReceiver("Ryan");

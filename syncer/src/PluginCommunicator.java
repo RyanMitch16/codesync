@@ -1,3 +1,5 @@
+import java.io.File;
+import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 
@@ -6,13 +8,14 @@ public class PluginCommunicator {
   private ServerSocket inputSocket;
   private Socket outputSocket;
 
-  PluginCommunicator() {
+
+
+  PluginCommunicator(PerspectiveSender perspective) {
 
   }
 
-  public void waitForChanges() {
-
+  public void waitForChanges() throws IOException {
+    Socket socket = inputSocket.accept();
   }
 
-  //public void sendChages()
 }
