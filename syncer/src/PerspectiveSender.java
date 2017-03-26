@@ -150,6 +150,8 @@ public class PerspectiveSender {
 
   }
 
+  static Semaphore mutex = new Semaphore(2);
+
   static DataOutputStream dos;
   static Socket s;
 
@@ -162,7 +164,6 @@ public class PerspectiveSender {
 
     public MiniServer(Socket socket) throws IOException {
       this.socket = socket;
-      dis = new DataInputStream(socket.getInputStream());
     }
 
     public void run() {
@@ -175,6 +176,14 @@ public class PerspectiveSender {
         while (true) {
 
           System.out.print("MMMM");
+          dis = new DataInputStream(socket.getInputStream());
+
+          while (dis.available() <= 0) {
+
+          }
+
+          mutex.acquire();
+
           int size = dis.readInt();
           byte[] buffer = new byte[size];
           dis.read(buffer, 0, size);
@@ -188,8 +197,9 @@ public class PerspectiveSender {
             Scanner scanner = new Scanner(System.in);
             if (scanner.next().toLowerCase().equals("y")) {
               System.out.println("Access granted");
-              dos = new DataOutputStream(socket.getOutputStream());
+
               s = socket;
+              dos = new DataOutputStream(socket.getOutputStream());
               dos.writeByte(1);
               sendAllFiles(new File(projectPath.toString()), dos);
               dos.writeByte(0);
@@ -244,16 +254,22 @@ public class PerspectiveSender {
             fooStream.close();
           }
 
+          mutex.release();
+
           if (s != socket) {
+            System.out.println("CLOSE");
             socket.close();
             return;
           }
+
           //inSocket.close();
           dos.flush();
 
+
+
         }
 
-      }catch (IOException e) {
+      }catch (Exception e) {
         e.printStackTrace();
       }
 
