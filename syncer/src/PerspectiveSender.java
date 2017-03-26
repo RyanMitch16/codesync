@@ -48,44 +48,48 @@ public class PerspectiveSender {
     inputSocket = new ServerSocket(9999);
     while (true) {
       Socket inSocket = inputSocket.accept();
-      InputStream inputStream = inSocket.getInputStream();
-      int size = inputStream.read();
+      DataInputStream dis = new DataInputStream(inSocket.getInputStream());
+      DataOutputStream dos = new DataOutputStream(inSocket.getOutputStream());
+      int size = dis.readInt();
       byte[] buffer = new byte[size];
-      inputStream.read(buffer, 0, size);
+      dis.read(buffer, 0, size);
       String request = new String(buffer);
 
+      System.out.println(request);
+
       if (request.startsWith("UPDATE_OTHERS:")) {
-        outputSocket.getOutputStream().write(size);
-        outputSocket.getOutputStream().write("UPDATE_SELF:".getBytes());
+
+        dos.writeInt(size);
+        dos.write("UPDATE_SELF:".getBytes());
 
         // Retrieve the file name of the file
-        int fileNameSize = inputStream.read();
+        int fileNameSize = dis.readInt();
         byte[] fileNameBuffer = new byte[fileNameSize];
-        inputStream.read(fileNameBuffer, 0, fileNameSize);
+        dis.read(fileNameBuffer, 0, fileNameSize);
         String fileName = new String(fileNameBuffer);
         String relativePath = fileName.substring(projectPath.toAbsolutePath().toString().length() + 1);
 
-        outputSocket.getOutputStream().write(relativePath.getBytes().length);
-        outputSocket.getOutputStream().write(relativePath.getBytes());
+        dos.writeInt(relativePath.getBytes().length);
+        dos.write(relativePath.getBytes());
 
-        int contentsSize = inputStream.read();
+        int contentsSize = dis.readInt();
         byte[] contentsBuffers = new byte[contentsSize];
-        inputStream.read(contentsBuffers, 0, contentsSize);
+        dis.read(contentsBuffers, 0, contentsSize);
 
-        outputSocket.getOutputStream().write(contentsBuffers);
+        dos.write(contentsBuffers);
       } else if (request.startsWith("UPDATE_SELF:")) {
         System.out.println("Updates found");
 
         // Retrieve the file name of the file
-        int fileNameSize = inputStream.read();
+        int fileNameSize = dis.readInt();
         byte[] fileNameBuffer = new byte[fileNameSize];
-        inputStream.read(fileNameBuffer, 0, fileNameSize);
+        dis.read(fileNameBuffer, 0, fileNameSize);
         String fileName = new String(fileNameBuffer);
 
         File file = new File(projectPath.toAbsolutePath().toString(), fileName);
-        int contentsSize = inputStream.read();
+        int contentsSize = dis.readInt();
         byte[] contentsBuffers = new byte[contentsSize];
-        inputStream.read(contentsBuffers, 0, contentsSize);
+        dis.read(contentsBuffers, 0, contentsSize);
 
         FileOutputStream fooStream = new FileOutputStream(file, false);
         fooStream.write(contentsBuffers);
@@ -109,6 +113,8 @@ public class PerspectiveSender {
       byte[] buffer = new byte[size];
       inputStream.read(buffer, 0, size);
       String request = new String(buffer);
+
+      System.out.print(request);
 
       if (request.startsWith("ACCESS:")) {
         System.out.println("Would you like to allow access to "
@@ -228,7 +234,7 @@ public class PerspectiveSender {
 
       if (args[0].equals("r")) {
         PerspectiveSender perspectiveSender = new PerspectiveSender("10.122.1.61", 8765, 8766,
-            Paths.get("C:"));
+            Paths.get("/home/chris/"));
         perspectiveSender.openReceiver("Ryan");
 
       } else {
