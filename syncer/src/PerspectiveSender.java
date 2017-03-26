@@ -173,12 +173,12 @@ public class PerspectiveSender {
     try {
 
       if (args[0].equals("r")) {
-        PerspectiveSender perspectiveSender = new PerspectiveSender("10.122.1.61", 8765, 8766,
+        PerspectiveSender perspectiveSender = new PerspectiveSender("10.122.1.61", 8766, 9999,
             Paths.get("C:/Users/hhajd/Documents/TARGET"));
         perspectiveSender.openReceiver("Ryan");
 
       } else {
-        PerspectiveSender perspectiveSender = new PerspectiveSender("10.122.70.134", 8766, 8765,
+        PerspectiveSender perspectiveSender = new PerspectiveSender("10.122.212.221", 9999, 8766,
             Paths.get("/Users/ryanmitchell/Desktop/projects/codesync/syncer/"));
         perspectiveSender.openHost();
       }
