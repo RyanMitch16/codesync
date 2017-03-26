@@ -25,7 +25,6 @@ public class PerspectiveSender {
   }
 
   static Socket ssss;
-  static Semaphore mutex = new Semaphore(1);
 
   class MiniReciever extends Thread {
 
@@ -266,6 +265,7 @@ public class PerspectiveSender {
 
           //inSocket.close();
           dos.flush();
+          buffer = null;
 
 
 
@@ -305,9 +305,14 @@ public class PerspectiveSender {
     inputStream.read(fileNameBuffer, 0, fileNameSize);
     String fileName = new String(fileNameBuffer);
 
+    File file = new File(projectPath.toAbsolutePath().toString(), fileName);
+
+    if (!file.exists()) {
+      file.createNewFile();
+    }
+
     // Write the file to the location in the perspective directory
-    BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(
-        new File(projectPath.toAbsolutePath().toString(), fileName)));
+    BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(file));
     int bytesTotal = inputStream.readInt();
     byte[] buffer = new byte[bytesTotal];
     inputStream.read(buffer, 0, bytesTotal);
@@ -336,13 +341,15 @@ public class PerspectiveSender {
   }
 
   private void sendAllFiles(File path, DataOutputStream outputStream) throws IOException {
-    for (File file : path.listFiles()) {
-      if (file.isDirectory()) {
-        //sendAllFiles(file, outputStream);
-      } else {
-        outputStream.writeByte(1);
-        System.out.println("Sent 1");
-        sendFile(file, outputStream);
+    if (path.listFiles() != null) {
+      for (File file : path.listFiles()) {
+        if (file.isDirectory()) {
+          sendAllFiles(file, outputStream);
+        } else {
+          outputStream.writeByte(1);
+          System.out.println("Sent 1");
+          sendFile(file, outputStream);
+        }
       }
     }
   }
@@ -358,7 +365,7 @@ public class PerspectiveSender {
 
       } else {
         PerspectiveSender perspectiveSender = new PerspectiveSender("10.122.212.221", 9999, 9999,
-            Paths.get("/Users/ryanmitchell/Desktop/projects/codesync/syncer/"));
+            Paths.get("/Users/ryanmitchell/Desktop/projects/codesync/syncer/dir/"));
         perspectiveSender.openHost();
       }
     } catch (Exception e) {
