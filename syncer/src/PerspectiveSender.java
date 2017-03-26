@@ -29,8 +29,9 @@ public class PerspectiveSender {
     outputSocket = new Socket(ip, targetPort);
 
     byte[] requestbytes = ("ACCESS:" + username).getBytes();
-    outputSocket.getOutputStream().write(requestbytes.length);
-    outputSocket.getOutputStream().write(requestbytes);
+    DataOutputStream rdos = new DataOutputStream(outputSocket.getOutputStream());
+    rdos.writeInt(requestbytes.length);
+    rdos.write(requestbytes);
 
     //Socket inSocket = outputSocket.getInputStream();
     InputStream is = outputSocket.getInputStream();
@@ -43,13 +44,15 @@ public class PerspectiveSender {
     } else {
       System.out.println("Connection refused");
     }
+    outputSocket.close();
+    outputSocket = new Socket(ip, targetPort);
     //inSocket.close();
 
     inputSocket = new ServerSocket(9999);
     while (true) {
       Socket inSocket = inputSocket.accept();
       DataInputStream dis = new DataInputStream(inSocket.getInputStream());
-      DataOutputStream dos = new DataOutputStream(inSocket.getOutputStream());
+      DataOutputStream dos = new DataOutputStream(outputSocket.getOutputStream());
       int size = dis.readInt();
       byte[] buffer = new byte[size];
       dis.read(buffer, 0, size);
@@ -59,6 +62,83 @@ public class PerspectiveSender {
 
       if (request.startsWith("UPDATE_OTHERS:")) {
 
+        dos.writeInt(size);
+        dos.write("UPDATE_SELF:".getBytes());
+
+        // Retrieve the file name of the file
+        int fileNameSize = dis.readInt();
+        byte[] fileNameBuffer = new byte[fileNameSize];
+        dis.read(fileNameBuffer, 0, fileNameSize);
+        String fileName = new String(fileNameBuffer);
+        String relativePath = fileName.substring(projectPath.toAbsolutePath().toString().length() + 1);
+
+        dos.writeInt(relativePath.getBytes().length);
+        dos.write(relativePath.getBytes());
+
+        int contentsSize = dis.readInt();
+        byte[] contentsBuffers = new byte[contentsSize];
+        dis.read(contentsBuffers, 0, contentsSize);
+
+        dos.write(contentsBuffers);
+        dos.flush();
+
+
+      } else if (request.startsWith("UPDATE_SELF:")) {
+        System.out.println("Updates found");
+
+        // Retrieve the file name of the file
+        int fileNameSize = dis.readInt();
+        byte[] fileNameBuffer = new byte[fileNameSize];
+        dis.read(fileNameBuffer, 0, fileNameSize);
+        String fileName = new String(fileNameBuffer);
+
+        File file = new File(projectPath.toAbsolutePath().toString(), fileName);
+        int contentsSize = dis.readInt();
+        byte[] contentsBuffers = new byte[contentsSize];
+        dis.read(contentsBuffers, 0, contentsSize);
+
+        FileOutputStream fooStream = new FileOutputStream(file, false);
+        fooStream.write(contentsBuffers);
+        fooStream.close();
+      }
+      //inSocket.close();
+
+    }
+  }
+
+  /** */
+  public void openHost() throws IOException {
+
+    inputSocket = new ServerSocket(receivingPort);
+    //outputSocket = new Socket(ip, targetPort);
+
+    while (true) {
+      Socket inSocket = inputSocket.accept();
+      DataInputStream dis = new DataInputStream(inSocket.getInputStream());
+      DataOutputStream dos = new DataOutputStream(inSocket.getOutputStream());
+      System.out.print("MMMM");
+      int size = dis.readInt();
+      byte[] buffer = new byte[size];
+      dis.read(buffer, 0, size);
+      String request = new String(buffer);
+
+      System.out.print(request);
+
+      if (request.startsWith("ACCESS:")) {
+        System.out.println("Would you like to allow access to "
+            + request.substring(request.indexOf(":") + 1) +"? (y/n)");
+        Scanner scanner = new Scanner(System.in);
+        if (scanner.next().toLowerCase().equals("y")) {
+          System.out.println("Access granted");
+          dos.writeByte(1);
+          sendAllFiles(new File(projectPath.toString()), inSocket.getOutputStream());
+          dos.writeByte(0);
+          System.out.println("Done");
+        } else {
+          System.out.println("Access denied");
+          dos.writeByte(0);
+        }
+      } else if (request.startsWith("UPDATE_OTHERS:")) {
         dos.writeInt(size);
         dos.write("UPDATE_SELF:".getBytes());
 
@@ -95,79 +175,7 @@ public class PerspectiveSender {
         fooStream.write(contentsBuffers);
         fooStream.close();
       }
-      inSocket.close();
-
-    }
-  }
-
-  /** */
-  public void openHost() throws IOException {
-
-    inputSocket = new ServerSocket(receivingPort);
-    //outputSocket = new Socket(ip, targetPort);
-
-    while (true) {
-      Socket inSocket = inputSocket.accept();
-      InputStream inputStream = inSocket.getInputStream();
-      int size = inputStream.read();
-      byte[] buffer = new byte[size];
-      inputStream.read(buffer, 0, size);
-      String request = new String(buffer);
-
-      System.out.print(request);
-
-      if (request.startsWith("ACCESS:")) {
-        System.out.println("Would you like to allow access to "
-            + request.substring(request.indexOf(":") + 1) +"? (y/n)");
-        Scanner scanner = new Scanner(System.in);
-        if (scanner.next().toLowerCase().equals("y")) {
-          System.out.println("Access granted");
-          inSocket.getOutputStream().write(1);
-          sendAllFiles(new File(projectPath.toString()), inSocket.getOutputStream());
-          inSocket.getOutputStream().write(0);
-          System.out.println("Done");
-        } else {
-          System.out.println("Access denied");
-          inSocket.getOutputStream().write(0);
-        }
-      } else if (request.startsWith("UPDATE_OTHERS:")) {
-        inSocket.getOutputStream().write(size);
-        inSocket.getOutputStream().write("UPDATE_SELF:".getBytes());
-
-        // Retrieve the file name of the file
-        int fileNameSize = inputStream.read();
-        byte[] fileNameBuffer = new byte[fileNameSize];
-        inputStream.read(fileNameBuffer, 0, fileNameSize);
-        String fileName = new String(fileNameBuffer);
-        String relativePath = fileName.substring(projectPath.toAbsolutePath().toString().length() + 1);
-
-        inSocket.getOutputStream().write(relativePath.getBytes().length);
-        inSocket.getOutputStream().write(relativePath.getBytes());
-
-        int contentsSize = inputStream.read();
-        byte[] contentsBuffers = new byte[contentsSize];
-        inputStream.read(contentsBuffers, 0, contentsSize);
-
-        inSocket.getOutputStream().write(contentsBuffers);
-      } else if (request.startsWith("UPDATE_SELF:")) {
-        System.out.println("Updates found");
-
-        // Retrieve the file name of the file
-        int fileNameSize = inputStream.read();
-        byte[] fileNameBuffer = new byte[fileNameSize];
-        inputStream.read(fileNameBuffer, 0, fileNameSize);
-        String fileName = new String(fileNameBuffer);
-
-        File file = new File(projectPath.toAbsolutePath().toString(), fileName);
-        int contentsSize = inputStream.read();
-        byte[] contentsBuffers = new byte[contentsSize];
-        inputStream.read(contentsBuffers, 0, contentsSize);
-
-        FileOutputStream fooStream = new FileOutputStream(file, false);
-        fooStream.write(contentsBuffers);
-        fooStream.close();
-      }
-      inSocket.close();
+      //inSocket.close();
     }
   }
 
