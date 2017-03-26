@@ -3,38 +3,84 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Scanner;
 
 public class PerspectiveSender {
 
   private final String ip;
-  private final int inputPort;
-  private final int outputPort;
+  private final int receivingPort;
+  private final int targetPort;
   private final Path projectPath;
 
   private ServerSocket inputSocket;
   private Socket outputSocket;
 
   /** */
-  public PerspectiveSender(String ip, int inputPort, int outputPort, Path projectPath) {
+  public PerspectiveSender(String ip, int receivingPort, int targetPort, Path projectPath) {
     this.ip = ip;
-    this.inputPort = inputPort;
-    this.outputPort = outputPort;
+    this.receivingPort = receivingPort;
+    this.targetPort = targetPort;
     this.projectPath = projectPath;
   }
 
   /** */
-  public void open() throws IOException {
-    inputSocket = new ServerSocket(inputPort);
-    outputSocket = new Socket(ip, outputPort);
+  public void openReceiver(String username) throws IOException {
+    System.out.println("Requesting connection");
+    inputSocket = new ServerSocket(receivingPort);
+    outputSocket = new Socket(ip, targetPort);
+
+    byte[] request = ("ACCESS:" + username).getBytes();
+    outputSocket.getOutputStream().write(request);
+    outputSocket.getOutputStream().write(request.length);
+
+    Socket inSocket = inputSocket.accept();
+    if (inSocket.getInputStream().read() == 1) {
+      System.out.println("Connection accepted");
+      while (inSocket.getInputStream().read() == 1) {
+        receiveFile(inSocket.getInputStream());
+      }
+      System.out.println("Files transferred");
+    } else {
+      System.out.println("Connection refused");
+    }
+    inSocket.close();
   }
 
   /** */
-  public void close() {
+  public void openHost() throws IOException {
+    inputSocket = new ServerSocket(receivingPort);
+    outputSocket = new Socket(ip, targetPort);
 
+    while (true) {
+      Socket inSocket = inputSocket.accept();
+      InputStream inputStream = inSocket.getInputStream();
+      int size = inputStream.read();
+      byte[] buffer = new byte[size];
+      inputStream.read(buffer, 0, size);
+      String request = new String(buffer);
+      if (request.startsWith("ACCESS:")) {
+        System.out.println("Would you like to allow access to "
+            + request.substring(request.indexOf(":") + 1) +"? (y/n)");
+        Scanner scanner = new Scanner(System.in);
+        if (scanner.next().toLowerCase().equals("y")) {
+          outputSocket.getOutputStream().write(1);
+          sendAllFiles(new File(projectPath.toString()), outputSocket.getOutputStream());
+          outputSocket.getOutputStream().write(0);
+        } else {
+          outputSocket.getOutputStream().write(0);
+        }
+      }
+    }
   }
 
+  /** */
+  public void close() throws IOException {
+    inputSocket.close();
+    outputSocket.close();
+  }
+
+  /** */
   private void receiveFile(InputStream inputStream) throws IOException {
-    byte[] buffer = new byte[1024];
 
     // Retrieve the file name of the file
     int fileNameSize = inputStream.read();
@@ -45,8 +91,10 @@ public class PerspectiveSender {
     // Write the file to the location in the perspective directory
     BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(
         new File(projectPath.toAbsolutePath().toString(), fileName)));
-    int bytesRead = inputStream.read(fileNameBuffer, fileNameSize, fileNameBuffer.length);
-    bos.write(buffer, 0, bytesRead);
+    int bytesTotal = inputStream.read();
+    byte[] buffer = new byte[bytesTotal];
+    inputStream.read(fileNameBuffer, 0, bytesTotal);
+    bos.write(buffer, 0, bytesTotal);
     bos.close();
   }
 
@@ -55,8 +103,7 @@ public class PerspectiveSender {
     byte[] buffer = new byte[(int) file.length()];
 
     // Write the relative path of the file to the output stream
-    String relativePath = file.getAbsolutePath().substring(projectPath.toAbsolutePath().toString().length());
-    System.out.println(relativePath);
+    String relativePath = file.getAbsolutePath().substring(projectPath.toAbsolutePath().toString().length() + 1);
     byte[] fileNameBytes = relativePath.getBytes();
     outputStream.write(fileNameBytes.length);
     outputStream.write(fileNameBytes);
@@ -64,30 +111,37 @@ public class PerspectiveSender {
     // Write the file to the output stream
     BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file));
     bis.read(buffer, 0, buffer.length);
+    outputStream.write(buffer.length);
     outputStream.write(buffer, 0, buffer.length);
 
     //
     outputStream.flush();
   }
 
+  private void sendAllFiles(File path, OutputStream outputStream) throws IOException {
+    for (File file : path.listFiles()) {
+      if (file.isDirectory()) {
+        sendAllFiles(path, outputStream);
+      } else {
+        outputStream.write(1);
+        sendFile(file, outputStream);
+      }
+    }
+  }
+
   public static void main(String[] args){
 
     try {
 
-      if (args[0].equals("r")) {
-        PerspectiveSender perspectiveSender = new PerspectiveSender("10.122.70.134", 8765, 8766,
+      if (args[0].equals("bjhbjhbhj")) {
+        PerspectiveSender perspectiveSender = new PerspectiveSender("10.122.1.61", 8765, 8766,
             Paths.get("C:/Users/hhajd/Documents/TARGET"));
-        perspectiveSender.open();
-
-        Socket sock = perspectiveSender.inputSocket.accept();
-        perspectiveSender.receiveFile(sock.getInputStream());
-        sock.close();
+        perspectiveSender.openReceiver("Ryan");
 
       } else {
-        PerspectiveSender perspectiveSender = new PerspectiveSender("10.122.1.61", 8766, 8765,
-            Paths.get("Users/ryanmitchell/Desktop/projects/codesync"));
-        perspectiveSender.open();
-        perspectiveSender.sendFile(new File("Hello.txt"), perspectiveSender.outputSocket.getOutputStream());
+        PerspectiveSender perspectiveSender = new PerspectiveSender("10.122.70.134", 8766, 8765,
+            Paths.get("/Users/ryanmitchell/Desktop/projects/codesync/syncer/"));
+        perspectiveSender.openHost();
       }
     } catch (IOException e) {
       System.out.println(e.toString());

@@ -14,5 +14,5 @@ public class PluginCommunicator {
 
   }
 
-  public void sendChages()
+  //public void sendChages()
 }
