@@ -25,6 +25,7 @@ public class PerspectiveSender {
   }
 
   static Socket ssss;
+  static Semaphore mutex = new Semaphore(1);
 
   class MiniReciever extends Thread {
 
@@ -45,7 +46,7 @@ public class PerspectiveSender {
             DataInputStream dis = new DataInputStream(socket.getInputStream());
 
             int size = dis.readInt();
-
+	    mutex.acquire();
             byte[] buffer = new byte[size];
             dis.read(buffer, 0, size);
             String request = new String(buffer);
@@ -98,6 +99,7 @@ public class PerspectiveSender {
               fooStream.close();
 
             }
+	    mutex.release();
             if (socket != ssss) {
               socket.close();
               return;
