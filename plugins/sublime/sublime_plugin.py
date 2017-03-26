@@ -14,24 +14,26 @@ class MonitorChanges(sublime_plugin.EventListener):
         port = 9999
 
         # connection to hostname on the port.
-        try:
-            filename = view.file_name()
-            call = "UPDATE_OTHERS:"
-            msg = intToBytes(len(call))
-            msg += bytes(call, 'utf_8') 
-            msg += intToBytes(len(filename))
-            msg += bytes(filename, 'utf_8')
-            msg += intToBytes(len(view.substr(sublime.Region(0, view.size()))))
-            msg += bytes(view.substr(sublime.Region(0, view.size())), 'utf_8')
+        if(view.is_dirty()):
+            try:
+                filename = view.file_name()
+                call = "UPDATE_OTHERS:"
+                msg = intToBytes(len(call))
+                msg += bytes(call, 'utf_8') 
+                msg += intToBytes(len(filename))
+                msg += bytes(filename, 'utf_8')
+                msg += intToBytes(len(view.substr(sublime.Region(0, view.size()))))
+                msg += bytes(view.substr(sublime.Region(0, view.size())), 'utf_8')
             #print(str(msg))
-            try: 
-                s.connect((host, port))
-                s.send(msg)
-                s.close()
-            except ConnectionRefusedError:
-                print("Connection Refused")
-        except TypeError:
-            print("Type Error")
+                try: 
+                    s.connect((host, port))
+                    s.send(msg)
+                    s.close()
+                    #sublime.save_settings(filename)
+                except ConnectionRefusedError:
+                    print("Connection Refused")
+            except TypeError:
+                print("Type Error")
 
 
         #print(view.substr(sublime.Region(0, view.size()-1)
