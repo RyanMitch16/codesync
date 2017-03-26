@@ -24,8 +24,8 @@ public class PerspectiveSender {
     this.projectPath = projectPath;
   }
 
-  //static DataOutputStream dos;
-  //static Socket s;
+  static DataOutputStream dos;
+  static Socket ssss;
 
   class MiniReciever extends Thread {
 
@@ -98,7 +98,10 @@ public class PerspectiveSender {
               fooStream.close();
 
             }
-            //inSocket.close();
+            if (socket != ssss) {
+              ssss.close();
+              return;
+            }
             dos.flush();
           }
 
@@ -137,6 +140,7 @@ public class PerspectiveSender {
 
     ServerSocket ss = new ServerSocket(9999);
     MiniReciever mini = new MiniReciever(outputSocket, is);
+    ssss = outputSocket;
     mini.start();
     while (true) {
       Socket clientSocket = ss.accept();
