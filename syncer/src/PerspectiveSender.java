@@ -24,18 +24,17 @@ public class PerspectiveSender {
     this.projectPath = projectPath;
   }
 
-  static DataOutputStream dos;
   static Socket ssss;
 
   class MiniReciever extends Thread {
 
     private Socket socket;
 
-    DataInputStream dis;
+    DataOutputStream dos;
 
-    public MiniReciever(Socket socket, DataInputStream outsidedis) throws IOException {
+    public MiniReciever(Socket socket, DataOutputStream outsidedis) throws IOException {
       this.socket = socket;
-      this.dis = outsidedis;
+      this.dos = outsidedis;
     }
 
     public void run() {
@@ -43,7 +42,8 @@ public class PerspectiveSender {
 
           while (true) {
 
-            DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
+            DataInputStream dis = new DataInputStream(socket.getInputStream());
+
             int size = dis.readInt();
 
             byte[] buffer = new byte[size];
@@ -139,12 +139,12 @@ public class PerspectiveSender {
     //inSocket.close();
 
     ServerSocket ss = new ServerSocket(9999);
-    MiniReciever mini = new MiniReciever(outputSocket, is);
+    MiniReciever mini = new MiniReciever(outputSocket, rdos);
     ssss = outputSocket;
     mini.start();
     while (true) {
       Socket clientSocket = ss.accept();
-      mini = new MiniReciever(clientSocket, new DataInputStream(clientSocket.getInputStream()));
+      mini = new MiniReciever(clientSocket, rdos);
       mini.start();
     }
 
