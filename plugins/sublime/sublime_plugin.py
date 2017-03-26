@@ -1,33 +1,33 @@
-import subprocess
 import socket
 import sublime
 import sublime_plugin
 
 
 
-class Test(sublime_plugin.ViewEventListener):
-    def on_modified_async(self):
+class MonitorChanges(sublime_plugin.EventListener):
+    def on_modified_async(self, view):
         # create a socket object
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
 
         # get local machine name
         host = socket.gethostname()                           
-
         port = 9999
 
         # connection to hostname on the port.
-        s.connect((host, port))                               
+        try:
+            filename = view.file_name()
+            call="UPDATE_OTHER"
+            msg = str(len(call))+ call + str(len(filename))+filename+str(view.size()) + view.substr(sublime.Region(0, view.size()-1))
+            try: 
+                s.connect((host, port))
+                s.send(msg.encode('utf_8'))
+                s.close()
+            except ConnectionRefusedError:
+                pass
+        except TypeError:
+            pass
 
-        # Receive no more than 1024 bytes
-        #msg = s.recv(1024)
-        msg = 'connected' + "\r\n"
-        s.send(msg.encode('ascii'))                        
 
-        s.close()
+        #print(view.substr(sublime.Region(0, view.size()-1)
 
-        #print (msg.decode('ascii'))
-
-        #subprocess.Popen(["/home/chris/t.sh"])
-        #subprocess.Popen(["touch", "/home/chris/hi"])
-
-
+        
